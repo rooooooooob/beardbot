@@ -13,18 +13,25 @@ connect(Address, Port) ->
 	gen_tcp:send(Socket, UserInfo),
 	main_loop(Socket).
 
+handle_message(Socket, [Name, "PRIVMSG", Channel], Message) ->
+	%io:format("<<<PRIVMSG HANDLER>>>~n", []),
+	Nick = hd(string:tokens(Name, "!")),
+	io:format(Channel ++ " | <" ++ Nick ++ "> " ++ Message ++ "~n", []);
+
 handle_message(Socket, ["PING"], Rest) ->
 	gen_tcp:send(Socket, "PONG " ++ Rest ++ "\r\n");
 
 handle_message(Socket, _, _) ->
-	ignored.
+	ignored.%io:format("?~n", []).
 
 main_loop(Socket) ->
 	receive
 		{tcp, Socket, Data} ->
 			io:format("Received:~n~s~n~n", [Data]),
 			ByColon = string:tokens(Data, ":"),
+			%io:format("length(ByColon) = ~p~n", [length(ByColon)]),
 			BySpace = string:tokens(hd(ByColon), " "),
+			%io:format("length(BySpace) = ~p~n", [length(BySpace)]),
 			LaterArgs = if 
 				length(ByColon) > 1 ->
 					lists:nth(2, ByColon);
@@ -43,6 +50,7 @@ main_loop(Socket) ->
 			gen_tcp:send(Socket, "JOIN :" ++ Channel ++ "\r\n"),
 			main_loop(Socket);
 		{say, Channel, Message} ->
+			io:format("privmsg received~n", []),
 			gen_tcp:send(Socket, "PRIVMSG " ++ Channel ++ " :" ++ Message ++ "\r\n"),
 			main_loop(Socket);
 		quit ->
